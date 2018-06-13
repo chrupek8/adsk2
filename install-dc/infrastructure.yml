@@ -1,0 +1,61 @@
+- hosts: web_nodes
+  become: yes
+  vars:
+    invitation: "Drogi uzytkowniku"
+    base_path: /var/www/html
+    shop_instances:
+      - 172.31.21.123:8080
+  tasks:
+    - name: "install nginx package"
+      yum:
+        name: nginx
+        state: present
+    - file:
+        path: "{{ base_path }}"
+        state: directory
+    - name: "copy welcome page"
+      template:
+        src: templates/index.html
+        dest: "{{ base_path }}/index.html"
+    - name: "place nginx config in right place"
+      template:
+        src: templates/commerce.conf
+        dest: /etc/nginx/conf.d/commerce.conf
+    - name: "restart nginx service"
+      service:
+        name: nginx
+        state: restarted
+
+- hosts: shop_nodes
+  become: yes
+  vars:
+    dc_repo: https://github.com/marcint339/kanban-board.git
+    dc_work_dir: /opt/kanban-board
+    os_packages:
+      - nodejs
+      - git
+  tasks:
+    - name: "node setup"
+      command: wget https://rpm.nodesource.com/setup_8.x
+    - name: "node setup 2"
+      command: bash setup_8.x
+    - name: "install git env"
+      yum: 
+        name: "{{ item }}"
+        state: present
+      with_items: "{{os_packages}}"
+    - git:
+        repo: "{{dc_repo}}"
+        dest: "{{dc_work_dir}}"
+    - user:
+        name: commerce
+        shell: /sbin/nologin
+    - template:
+        src: templates/commerce.service
+        dest: /etc/systemd/system/commerce.service
+    - template:
+        src: templates/commerce-config
+        dest: /etc/sysconfig/commerce-config
+    - name: "install packages"
+      npm:
+        path: "{{dc_work_dir}}"

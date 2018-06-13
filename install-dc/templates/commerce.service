@@ -1,0 +1,17 @@
+[Unit]
+Description=Digital commerce
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory={{dc_work_dir}}
+
+EnvironmentFile=-/etc/sysconfig/commerce-config
+
+ExecStart=/usr/bin/npm \
+  start --prefix {{dc_work_dir}}
+User=commerce
+Restart=always
+
+[Install]
+WantedBy=network.target
